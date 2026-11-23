@@ -1,0 +1,1133 @@
+import 'dart:async';
+import 'package:cached_network_image/cached_network_image.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:latlong2/latlong.dart';
+import 'package:url_launcher/url_launcher.dart';
+
+import '../../../app/app_state.dart';
+import '../../../app/theme.dart';
+import '../../../core/database/initial_data_seeder.dart';
+import '../../../core/models/order_model.dart';
+import '../../../core/services/currency_service.dart';
+import '../../../core/services/order_repository.dart';
+import '../../../core/utils/price_formatter.dart';
+import '../../../core/utils/whatsapp_helper.dart';
+import 'map_screen.dart';
+
+class MyOrdersScreen extends StatefulWidget {
+  final int initialTabIndex;
+
+  const MyOrdersScreen({
+    super.key,
+    this.initialTabIndex = 0,
+  });
+
+  @override
+  State<MyOrdersScreen> createState() => _MyOrdersScreenState();
+}
+
+class _MyOrdersScreenState extends State<MyOrdersScreen>
+    with SingleTickerProviderStateMixin {
+  late final TabController _tabController;
+  List<OrderModel> _orders = [];
+  bool _isLoading = false;
+
+  String get _activeUserId =>
+      AppState.instance.currentUser.value?.id ?? InitialDataSeeder.demoUserId;
+
+  List<OrderModel> get _buyerOrders =>
+      _orders.where((o) => o.buyerId == _activeUserId).toList();
+
+  List<OrderModel> get _sellerOrders =>
+      _orders.where((o) => o.sellerId == _activeUserId).toList();
+
+  @override
+  void initState() {
+    super.initState();
+    _tabController = TabController(
+      length: 2,
+      vsync: this,
+      initialIndex: widget.initialTabIndex,
+    );
+    _loadOrders();
+  }
+
+  @override
+  void dispose() {
+    _tabController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _loadOrders() async {
+    setState(() => _isLoading = true);
+    final orders = await OrderRepository.getMyOrders(_activeUserId);
+    if (!mounted) return;
+    setState(() {
+      _orders = orders;
+      _isLoading = false;
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final buyerOrders = _buyerOrders;
+    final sellerOrders = _sellerOrders;
+
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Pesanan'),
+        bottom: TabBar(
+          controller: _tabController,
+          indicatorColor: AppColors.gold,
+          labelColor: AppColors.gold,
+          unselectedLabelColor: AppColors.onSurfaceVariant,
+          tabs: [
+            Tab(
+              child: FittedBox(
+                fit: BoxFit.scaleDown,
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Text('Pembelian'),
+                    if (buyerOrders
+                        .any((o) => o.isReserved && !o.isExpired())) ...[
+                      const SizedBox(width: 6),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 6,
+                          vertical: 2,
+                        ),
+                        decoration: BoxDecoration(
+                          color: AppColors.gold,
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: Text(
+                          '${buyerOrders.where((o) => o.isReserved && !o.isExpired()).length}',
+                          style: const TextStyle(
+                            fontSize: 10,
+                            fontWeight: FontWeight.w800,
+                            color: Colors.black,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            ),
+            Tab(
+              child: FittedBox(
+                fit: BoxFit.scaleDown,
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Text('Penjualan'),
+                    if (sellerOrders
+                        .any((o) => o.isReserved && !o.isExpired())) ...[
+                      const SizedBox(width: 6),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 6,
+                          vertical: 2,
+                        ),
+                        decoration: BoxDecoration(
+                          color: AppColors.cyan,
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: Text(
+                          '${sellerOrders.where((o) => o.isReserved && !o.isExpired()).length}',
+                          style: const TextStyle(
+                            fontSize: 10,
+                            fontWeight: FontWeight.w800,
+                            color: Colors.black,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+      body: RefreshIndicator(
+        color: AppColors.gold,
+        backgroundColor: AppColors.surface,
+        onRefresh: _loadOrders,
+        child: _isLoading && _orders.isEmpty
+            ? const Center(
+                child: CircularProgressIndicator(color: AppColors.gold),
+              )
+            : TabBarView(
+                controller: _tabController,
+                children: [
+                  _OrderListView(
+                    orders: buyerOrders,
+                    isBuyerList: true,
+                    onOrderChanged: _loadOrders,
+                    emptyMessage:
+                        'Belum ada pesanan pembelian.\nPilih kartu yang kamu inginkan di Marketplace!',
+                  ),
+                  _OrderListView(
+                    orders: sellerOrders,
+                    isBuyerList: false,
+                    onOrderChanged: _loadOrders,
+                    emptyMessage:
+                        'Belum ada kartu daganganmu yang dipesan.\nPasang listing menarik untuk kolektor lain!',
+                  ),
+                ],
+              ),
+      ),
+    );
+  }
+}
+
+class _OrderListView extends StatelessWidget {
+  final List<OrderModel> orders;
+  final bool isBuyerList;
+  final String emptyMessage;
+  final VoidCallback? onOrderChanged;
+
+  const _OrderListView({
+    required this.orders,
+    required this.isBuyerList,
+    required this.emptyMessage,
+    this.onOrderChanged,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    if (orders.isEmpty) {
+      return LayoutBuilder(
+        builder: (context, constraints) {
+          return SingleChildScrollView(
+            physics: const AlwaysScrollableScrollPhysics(),
+            child: ConstrainedBox(
+              constraints: BoxConstraints(minHeight: constraints.maxHeight),
+              child: Center(
+                child: Padding(
+                  padding: const EdgeInsets.all(32),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: const BoxDecoration(
+                          color: AppColors.surfaceHigh,
+                          shape: BoxShape.circle,
+                        ),
+                        child: Icon(
+                          isBuyerList
+                              ? Icons.shopping_bag_outlined
+                              : Icons.storefront_outlined,
+                          size: 40,
+                          color: AppColors.outline,
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      Text(
+                        emptyMessage,
+                        textAlign: TextAlign.center,
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                              color: AppColors.onSurfaceVariant,
+                              height: 1.4,
+                            ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          );
+        },
+      );
+    }
+
+    return ListView.builder(
+      physics: const AlwaysScrollableScrollPhysics(),
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
+      itemCount: orders.length,
+      itemBuilder: (context, index) {
+        final order = orders[index];
+        return OrderCardItem(
+          key: ValueKey(order.id),
+          order: order,
+          isBuyer: isBuyerList,
+          onOrderChanged: onOrderChanged,
+        );
+      },
+    );
+  }
+}
+
+/// Item Card Pesanan Rekber COD (StatefulWidget)
+class OrderCardItem extends StatefulWidget {
+  final OrderModel order;
+  final bool isBuyer;
+  final VoidCallback? onOrderChanged;
+
+  const OrderCardItem({
+    super.key,
+    required this.order,
+    required this.isBuyer,
+    this.onOrderChanged,
+  });
+
+  @override
+  State<OrderCardItem> createState() => _OrderCardItemState();
+}
+
+class _OrderCardItemState extends State<OrderCardItem> {
+  bool _isProcessing = false;
+  bool _isContacting = false;
+
+  String get _activeUserId =>
+      AppState.instance.currentUser.value?.id ?? InitialDataSeeder.demoUserId;
+
+  String get _activeUsername =>
+      AppState.instance.currentUser.value?.username ??
+      InitialDataSeeder.demoUsername;
+
+  Future<void> _handleContactWhatsApp() async {
+    setState(() => _isContacting = true);
+    final messenger = ScaffoldMessenger.of(context);
+
+    try {
+      final contactResult = await OrderRepository.getOrderContact(
+        orderId: widget.order.id,
+        userId: _activeUserId,
+      );
+
+      if (!mounted) return;
+
+      if (!contactResult.ok || contactResult.whatsappNumber == null) {
+        final errText = contactResult.message ??
+            (contactResult.errorCode == 'no_contact'
+                ? 'Pihak lawan (@${widget.order.otherPartyUsername ?? 'Lawan'}) belum mengisi nomor WhatsApp.'
+                : 'Kontak WhatsApp hanya dapat diakses saat pesanan masih aktif.');
+
+        messenger.showSnackBar(
+          SnackBar(
+            content: Text(errText),
+            backgroundColor: AppColors.snackBarError,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+        return;
+      }
+
+      final phone = contactResult.whatsappNumber!;
+      final cardName = widget.order.card?.name ?? 'Kartu Pokémon';
+      final shortId = WhatsAppHelper.getShortOrderId(widget.order.id);
+      final loc = widget.order.listing?.lat != null
+          ? '${widget.order.listing!.lat!.toStringAsFixed(4)}, ${widget.order.listing!.lng!.toStringAsFixed(4)}'
+          : 'titik COD yang disepakati';
+
+      final message = WhatsAppHelper.buildInitialCodMessage(
+        myName: _activeUsername,
+        cardName: cardName,
+        shortOrderId: shortId,
+        codLocation: loc,
+      );
+
+      final uri =
+          WhatsAppHelper.buildWhatsAppUri(phone: phone, message: message);
+
+      bool launched = false;
+      try {
+        launched = await launchUrl(uri, mode: LaunchMode.externalApplication);
+      } catch (_) {
+        launched = false;
+      }
+
+      if (!launched && mounted) {
+        messenger.showSnackBar(
+          SnackBar(
+            content: Text(
+              'Tidak dapat membuka WhatsApp (${WhatsAppHelper.formatDisplayPhone(phone)})',
+            ),
+            backgroundColor: AppColors.surfaceHigh,
+            behavior: SnackBarBehavior.floating,
+            action: SnackBarAction(
+              label: 'Salin Nomor',
+              textColor: AppColors.gold,
+              onPressed: () {
+                Clipboard.setData(ClipboardData(text: phone));
+                messenger.showSnackBar(
+                  const SnackBar(
+                    content: Text('Nomor WhatsApp disalin ke clipboard!'),
+                    backgroundColor: AppColors.snackBarSuccess,
+                    behavior: SnackBarBehavior.floating,
+                  ),
+                );
+              },
+            ),
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        messenger.showSnackBar(
+          SnackBar(
+            content: Text('Gagal menghubungi: $e'),
+            backgroundColor: AppColors.snackBarError,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isContacting = false);
+    }
+  }
+
+  Future<void> _handleConfirmReceipt() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: AppColors.surface,
+        title: const Text('Konfirmasi Serah Terima?'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Pastikan kamu telah menerima kartu fisik ${widget.order.card?.name ?? 'Pokémon'} di titik COD dalam kondisi baik.',
+              style: const TextStyle(fontSize: 13, color: AppColors.onSurface),
+            ),
+            const SizedBox(height: 10),
+            Text(
+              'Saldo sebesar ${PriceFormatter.formatIdr(widget.order.amountIdr)} akan diserahkan ke penjual dan kartu resmi masuk ke Binder Koleksi Saya.',
+              style: const TextStyle(
+                fontSize: 12,
+                color: AppColors.onSurfaceVariant,
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Batal'),
+          ),
+          FilledButton(
+            style: FilledButton.styleFrom(
+              backgroundColor: AppColors.gold,
+              foregroundColor: AppColors.onGold,
+            ),
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Sudah Kuterima'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true || !mounted) return;
+
+    setState(() => _isProcessing = true);
+    final messenger = ScaffoldMessenger.of(context);
+
+    try {
+      await OrderRepository.confirmReceipt(
+        orderId: widget.order.id,
+        buyerId: _activeUserId,
+      );
+
+      if (!mounted) return;
+      widget.onOrderChanged?.call();
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text(
+            'Serah terima berhasil! Kartu ${widget.order.card?.name ?? ''} telah masuk ke Koleksi Saya.',
+          ),
+          backgroundColor: AppColors.snackBarSuccess,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text('Gagal konfirmasi: $e'),
+          backgroundColor: AppColors.snackBarError,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    } finally {
+      if (mounted) setState(() => _isProcessing = false);
+    }
+  }
+
+  Future<void> _handleCancelOrder() async {
+    final reason = await showDialog<String?>(
+      context: context,
+      barrierDismissible: true,
+      builder: (ctx) => _CancelOrderDialog(
+        isBuyer: widget.isBuyer,
+        amountIdr: widget.order.amountIdr,
+      ),
+    );
+
+    if (reason == null || !mounted) return;
+
+    setState(() => _isProcessing = true);
+    final messenger = ScaffoldMessenger.of(context);
+
+    try {
+      await OrderRepository.cancelOrder(
+        orderId: widget.order.id,
+        userId: _activeUserId,
+        reason: reason.isNotEmpty ? reason : null,
+      );
+
+      if (!mounted) return;
+      widget.onOrderChanged?.call();
+      messenger.showSnackBar(
+        const SnackBar(
+          content: Text('Pesanan berhasil dibatalkan dan saldo dikembalikan.'),
+          backgroundColor: AppColors.snackBarSuccess,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text('Gagal membatalkan pesanan: $e'),
+          backgroundColor: AppColors.snackBarError,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    } finally {
+      if (mounted) setState(() => _isProcessing = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final textTheme = Theme.of(context).textTheme;
+    final order = widget.order;
+    final card = order.card;
+    final listing = order.listing;
+
+    return ValueListenableBuilder<AppCurrency>(
+      valueListenable: AppState.instance.selectedCurrency,
+      builder: (context, selectedCurrency, _) {
+        String displayPrice;
+        if (selectedCurrency == AppCurrency.idr) {
+          displayPrice = PriceFormatter.formatIdr(order.amountIdr);
+        } else {
+          final converted = CurrencyService.convert(
+            order.amountIdr,
+            from: 'IDR',
+            to: selectedCurrency.code,
+          );
+          displayPrice = converted != null
+              ? PriceFormatter.format(converted, selectedCurrency.code)
+              : PriceFormatter.formatIdr(order.amountIdr);
+        }
+
+        final canConfirm = OrderActions.canConfirm(
+          order: order,
+          isBuyer: widget.isBuyer,
+        );
+        final canCancel = OrderActions.canCancel(
+          order: order,
+          isBuyer: widget.isBuyer,
+        );
+
+        return Card(
+          margin: const EdgeInsets.only(bottom: 12),
+          clipBehavior: Clip.antiAlias,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(14),
+            side: BorderSide(
+              color: order.isReserved
+                  ? AppColors.gold.withAlpha(90)
+                  : AppColors.surfaceHigh,
+              width: 1,
+            ),
+          ),
+          color: AppColors.surface,
+          elevation: 2,
+          child: Padding(
+            padding: const EdgeInsets.all(12),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Expanded(
+                      child: Row(
+                        children: [
+                          Icon(
+                            widget.isBuyer
+                                ? Icons.shopping_bag_outlined
+                                : Icons.storefront_outlined,
+                            size: 14,
+                            color: AppColors.onSurfaceVariant,
+                          ),
+                          const SizedBox(width: 4),
+                          Expanded(
+                            child: Text(
+                              widget.isBuyer
+                                  ? 'Penjual: @${order.otherPartyUsername ?? 'Penjual'}'
+                                  : 'Pembeli: @${order.otherPartyUsername ?? 'Pembeli'}',
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: textTheme.labelSmall?.copyWith(
+                                color: AppColors.onSurfaceVariant,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 2,
+                      ),
+                      decoration: BoxDecoration(
+                        color:
+                            OrderActions.statusColor(order.status).withAlpha(40),
+                        borderRadius: BorderRadius.circular(6),
+                        border: Border.all(
+                          color: OrderActions.statusColor(order.status),
+                          width: 1,
+                        ),
+                      ),
+                      child: Text(
+                        OrderActions.statusLabel(order.status),
+                        style: TextStyle(
+                          color: OrderActions.statusColor(order.status),
+                          fontSize: 10,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const Divider(height: 14),
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(6),
+                      child: Container(
+                        width: 50,
+                        height: 70,
+                        color: AppColors.surfaceHigh,
+                        child: card?.lowResImageUrl != null
+                            ? CachedNetworkImage(
+                                imageUrl: card!.lowResImageUrl!,
+                                fit: BoxFit.cover,
+                                errorWidget: (context, url, error) => const Icon(
+                                  Icons.broken_image_outlined,
+                                  size: 20,
+                                  color: AppColors.outline,
+                                ),
+                              )
+                            : const Icon(
+                                Icons.style,
+                                size: 24,
+                                color: AppColors.outline,
+                              ),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            card?.name ?? 'Kartu Pokémon',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: textTheme.titleSmall?.copyWith(
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            '${card?.setName ?? card?.setId ?? 'TCG'} ${card?.localId != null ? '#${card!.localId}' : ''}',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: textTheme.bodySmall?.copyWith(
+                              color: AppColors.onSurfaceVariant,
+                              fontSize: 11,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            displayPrice,
+                            style: textTheme.titleMedium?.copyWith(
+                              color: AppColors.gold,
+                              fontWeight: FontWeight.w800,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+
+                if (order.isReserved) ...[
+                  const SizedBox(height: 10),
+                  _CountdownBadge(expiresAt: order.expiresAt),
+                ],
+
+                if (listing != null &&
+                    listing.lat != null &&
+                    listing.lng != null) ...[
+                  const SizedBox(height: 8),
+                  InkWell(
+                    borderRadius: BorderRadius.circular(8),
+                    onTap: () {
+                      Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (_) => MapScreen(
+                            initialCenter: LatLng(listing.lat!, listing.lng!),
+                            initialZoom: 15.5,
+                            focusedListing: listing,
+                            title: 'Titik COD: ${card?.name ?? 'Pesanan'}',
+                          ),
+                        ),
+                      );
+                    },
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 8,
+                      ),
+                      decoration: BoxDecoration(
+                        color: AppColors.surfaceHigh.withAlpha(140),
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(
+                          color: AppColors.gold.withAlpha(80),
+                          width: 1,
+                        ),
+                      ),
+                      child: Row(
+                        children: [
+                          const Icon(
+                            Icons.location_on,
+                            size: 16,
+                            color: AppColors.gold,
+                          ),
+                          const SizedBox(width: 6),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Text(
+                                  'Titik COD: ${listing.lat!.toStringAsFixed(4)}, ${listing.lng!.toStringAsFixed(4)}',
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: textTheme.bodySmall?.copyWith(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w600,
+                                    color: AppColors.onSurface,
+                                  ),
+                                ),
+                                Text(
+                                  'Pusatkan ke titik COD di peta',
+                                  style: textTheme.labelSmall?.copyWith(
+                                    fontSize: 10,
+                                    color: AppColors.cyan,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(width: 6),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 4,
+                            ),
+                            decoration: BoxDecoration(
+                              color: AppColors.gold.withAlpha(30),
+                              borderRadius: BorderRadius.circular(6),
+                              border: Border.all(
+                                color: AppColors.gold,
+                                width: 1,
+                              ),
+                            ),
+                            child: const Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(
+                                  Icons.map_outlined,
+                                  size: 12,
+                                  color: AppColors.gold,
+                                ),
+                                SizedBox(width: 4),
+                                Text(
+                                  'Lihat Peta',
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    color: AppColors.gold,
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+
+                if (order.cancelReason != null &&
+                    order.cancelReason!.trim().isNotEmpty) ...[
+                  const SizedBox(height: 8),
+                  Text(
+                    'Alasan: ${order.cancelReason}',
+                    style: textTheme.bodySmall?.copyWith(
+                      color: AppColors.error,
+                      fontSize: 11,
+                      fontStyle: FontStyle.italic,
+                    ),
+                  ),
+                ],
+
+                // Tombol Kontak WhatsApp (Hanya saat status reserved)
+                if (order.isReserved) ...[
+                  const SizedBox(height: 10),
+                  SizedBox(
+                    width: double.infinity,
+                    child: FilledButton.icon(
+                      style: FilledButton.styleFrom(
+                        backgroundColor: AppColors.gold,
+                        foregroundColor: AppColors.onGold,
+                        minimumSize: const Size(0, 42),
+                        shape: RoundedRectangleBorder(
+                          borderRadius:
+                              BorderRadius.circular(AppTheme.radiusMd),
+                        ),
+                      ),
+                      icon: _isContacting
+                          ? const SizedBox(
+                              width: 14,
+                              height: 14,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                valueColor: AlwaysStoppedAnimation<Color>(
+                                  AppColors.onGold,
+                                ),
+                              ),
+                            )
+                          : const Icon(Icons.chat_bubble_outline, size: 16),
+                      label: FittedBox(
+                        fit: BoxFit.scaleDown,
+                        child: Text(
+                          _isContacting
+                              ? 'Menghubungkan...'
+                              : 'Hubungi via WhatsApp',
+                          maxLines: 1,
+                          style: const TextStyle(
+                            fontWeight: FontWeight.w600,
+                            fontSize: 13,
+                          ),
+                        ),
+                      ),
+                      onPressed: _isContacting ? null : _handleContactWhatsApp,
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Icon(
+                        Icons.security,
+                        size: 13,
+                        color: AppColors.outline,
+                      ),
+                      const SizedBox(width: 4),
+                      Expanded(
+                        child: Text(
+                          'Bertemu di tempat umum dan periksa kartu sebelum menekan "Sudah kuterima".',
+                          style: textTheme.labelSmall?.copyWith(
+                            color: AppColors.outline,
+                            fontSize: 10,
+                            height: 1.3,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+
+                if (canConfirm || canCancel) ...[
+                  const SizedBox(height: 12),
+                  Row(
+                    children: [
+                      if (canCancel)
+                        Expanded(
+                          child: OutlinedButton(
+                            style: OutlinedButton.styleFrom(
+                              foregroundColor: AppColors.error,
+                              side: const BorderSide(
+                                color: AppColors.error,
+                                width: 1.2,
+                              ),
+                              minimumSize: const Size(0, 42),
+                              shape: RoundedRectangleBorder(
+                                borderRadius:
+                                    BorderRadius.circular(AppTheme.radiusMd),
+                              ),
+                            ),
+                            onPressed:
+                                _isProcessing ? null : _handleCancelOrder,
+                            child: const FittedBox(
+                              fit: BoxFit.scaleDown,
+                              child: Text(
+                                'Batalkan',
+                                maxLines: 1,
+                                style: TextStyle(
+                                  fontWeight: FontWeight.w600,
+                                  fontSize: 13,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                      if (canConfirm && canCancel) const SizedBox(width: 8),
+                      if (canConfirm)
+                        Expanded(
+                          child: FilledButton(
+                            style: FilledButton.styleFrom(
+                              backgroundColor: AppColors.gold,
+                              foregroundColor: AppColors.onGold,
+                              minimumSize: const Size(0, 42),
+                              shape: RoundedRectangleBorder(
+                                borderRadius:
+                                    BorderRadius.circular(AppTheme.radiusMd),
+                              ),
+                            ),
+                            onPressed:
+                                _isProcessing ? null : _handleConfirmReceipt,
+                            child: _isProcessing
+                                ? const SizedBox(
+                                    width: 16,
+                                    height: 16,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                      color: AppColors.onGold,
+                                    ),
+                                  )
+                                : const FittedBox(
+                                    fit: BoxFit.scaleDown,
+                                    child: Text(
+                                      'Sudah Kuterima',
+                                      maxLines: 1,
+                                      style: TextStyle(
+                                        fontWeight: FontWeight.w600,
+                                        fontSize: 13,
+                                      ),
+                                    ),
+                                  ),
+                          ),
+                        ),
+                    ],
+                  ),
+                ],
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+}
+
+/// Widget Hitung Mundur Terisolasi (Anti Rebuild Layar Penuh)
+class _CountdownBadge extends StatefulWidget {
+  final DateTime expiresAt;
+
+  const _CountdownBadge({required this.expiresAt});
+
+  @override
+  State<_CountdownBadge> createState() => _CountdownBadgeState();
+}
+
+class _CountdownBadgeState extends State<_CountdownBadge> {
+  Timer? _timer;
+  late Duration _remaining;
+
+  @override
+  void initState() {
+    super.initState();
+    _updateRemaining();
+    _timer = Timer.periodic(const Duration(seconds: 1), (_) {
+      if (mounted) {
+        setState(() {
+          _updateRemaining();
+        });
+      }
+    });
+  }
+
+  void _updateRemaining() {
+    final now = DateTime.now();
+    if (now.isAfter(widget.expiresAt)) {
+      _remaining = Duration.zero;
+      _timer?.cancel();
+    } else {
+      _remaining = widget.expiresAt.difference(now);
+    }
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
+  }
+
+  String _formatDuration(Duration diff) {
+    if (diff == Duration.zero) return 'Kedaluwarsa';
+    final hours = diff.inHours;
+    final minutes = diff.inMinutes.remainder(60);
+    final seconds = diff.inSeconds.remainder(60);
+
+    if (hours > 24) {
+      final days = diff.inDays;
+      final remHours = hours.remainder(24);
+      return '${days}h ${remHours}j tersisa';
+    } else if (hours > 0) {
+      return '${hours}j ${minutes}m tersisa';
+    } else if (minutes > 0) {
+      return '${minutes}m ${seconds}d tersisa';
+    } else {
+      return '${seconds}d tersisa';
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final isStale = _remaining == Duration.zero;
+    final text = _formatDuration(_remaining);
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: isStale
+            ? AppColors.error.withAlpha(20)
+            : AppColors.gold.withAlpha(20),
+        borderRadius: BorderRadius.circular(6),
+        border: Border.all(
+          color: isStale ? AppColors.error : AppColors.gold.withAlpha(80),
+          width: 0.8,
+        ),
+      ),
+      child: FittedBox(
+        fit: BoxFit.scaleDown,
+        alignment: Alignment.centerLeft,
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              isStale ? Icons.timer_off_outlined : Icons.hourglass_top,
+              size: 13,
+              color: isStale ? AppColors.error : AppColors.gold,
+            ),
+            const SizedBox(width: 4),
+            Text(
+              'Batas konfirmasi: $text',
+              style: TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.w700,
+                color: isStale ? AppColors.error : AppColors.gold,
+                fontFeatures: const [
+                  FontFeature.tabularFigures(),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _CancelOrderDialog extends StatefulWidget {
+  final bool isBuyer;
+  final double amountIdr;
+
+  const _CancelOrderDialog({
+    required this.isBuyer,
+    required this.amountIdr,
+  });
+
+  @override
+  State<_CancelOrderDialog> createState() => _CancelOrderDialogState();
+}
+
+class _CancelOrderDialogState extends State<_CancelOrderDialog> {
+  late final TextEditingController _reasonController;
+
+  @override
+  void initState() {
+    super.initState();
+    _reasonController = TextEditingController();
+  }
+
+  @override
+  void dispose() {
+    _reasonController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      backgroundColor: AppColors.surface,
+      title: const Text('Batalkan Pesanan?'),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            widget.isBuyer
+                ? 'Saldo tertahan sebesar ${PriceFormatter.formatIdr(widget.amountIdr)} akan langsung dikembalikan utuh ke akun Anda, dan listing kartu kembali aktif.'
+                : 'Pesanan akan dibatalkan, saldo akan dikembalikan ke pembeli, dan listing kartu Anda akan kembali aktif di Marketplace.',
+            style: const TextStyle(fontSize: 13, color: AppColors.onSurface),
+          ),
+          const SizedBox(height: 12),
+          TextField(
+            controller: _reasonController,
+            decoration: const InputDecoration(
+              labelText: 'Alasan pembatalan (opsional)',
+              hintText: 'Contoh: Jadwal COD tidak cocok',
+            ),
+          ),
+        ],
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context, null),
+          child: const Text('Kembali'),
+        ),
+        FilledButton(
+          style: FilledButton.styleFrom(
+            backgroundColor: AppColors.error,
+            foregroundColor: Colors.white,
+          ),
+          onPressed: () {
+            Navigator.pop(context, _reasonController.text.trim());
+          },
+          child: const Text('Ya, Batalkan'),
+        ),
+      ],
+    );
+  }
+}
