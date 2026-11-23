@@ -1,0 +1,34 @@
+# Flutter & Dart build artifacts
+.dart_tool/
+.packages
+build/
+pubspec.lock
+doc/api/
+
+# Flutter plugins generated files
+.flutter-plugins
+.flutter-plugins-dependencies
+
+# Web / JavaScript compiled outputs
+*.dart.js
+*.info.json
+*.js
+*.js_
+*.js.deps
+*.js.map
+
+# Local Hive storage files (if generated in working directory)
+*.hive
+*.lock
+
+# IDE & OS files
+.idea/
+.vscode/
+*.iml
+.DS_Store
+Thumbs.db
+
+# Android signing keys
+android/key.properties
+*.jks
+*.keystore
