@@ -7,8 +7,6 @@ import '../../../core/repositories/card_repository.dart';
 import '../../../core/services/collection_repository.dart';
 import '../../../core/services/currency_service.dart';
 import '../../../core/utils/price_formatter.dart';
-import '../../converter/screens/calendar_screen.dart';
-import '../../converter/screens/converter_screen.dart';
 import '../widgets/card_tile.dart';
 import 'card_detail_screen.dart';
 import 'search_screen.dart';
@@ -782,13 +780,7 @@ class _DexScreenState extends State<DexScreen> {
       child: CustomScrollView(
         physics: const AlwaysScrollableScrollPhysics(),
         slivers: [
-          // 1. Baris Utilitas: 2 Tile Berlabel (Event & Konverter)
-          if (!_isSelectionMode)
-            SliverToBoxAdapter(
-              child: _buildFeatureTiles(context),
-            ),
-
-          // 2. Header Katalog & Selector Mata Uang Kompak
+          // 1. Header Katalog & Selector Chip Mata Uang Kompak (IDR, USD, EUR, JPY)
           _buildCatalogHeader(context, selectedCurrency, textTheme),
 
           // 3. Grid Kartu Katalog
@@ -1001,97 +993,6 @@ class _DexScreenState extends State<DexScreen> {
         ),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(14),
-        ),
-      ),
-    );
-  }
-
-  /// Baris Fitur: 2 Tile Berlabel (Event & Konverter) sesuai spesifikasi HoloDex v2
-  Widget _buildFeatureTiles(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(
-        kScreenHorizontalPadding,
-        4,
-        kScreenHorizontalPadding,
-        8,
-      ),
-      child: Row(
-        children: [
-          _buildSingleFeatureTile(
-            context: context,
-            label: 'Event & Pengingat',
-            icon: Icons.calendar_month,
-            semanticsLabel: 'Menu Event dan Pengingat Pokémon',
-            onTap: () {
-              Navigator.of(context).push(
-                MaterialPageRoute(builder: (_) => const CalendarScreen()),
-              );
-            },
-          ),
-          const SizedBox(width: 10),
-          _buildSingleFeatureTile(
-            context: context,
-            label: 'Konverter Kurs',
-            icon: Icons.currency_exchange,
-            semanticsLabel: 'Menu Konverter Mata Uang',
-            onTap: () {
-              Navigator.of(context).push(
-                MaterialPageRoute(builder: (_) => const ConverterScreen()),
-              );
-            },
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildSingleFeatureTile({
-    required BuildContext context,
-    required String label,
-    required IconData icon,
-    required String semanticsLabel,
-    required VoidCallback onTap,
-  }) {
-    return Expanded(
-      child: Semantics(
-        button: true,
-        label: semanticsLabel,
-        child: Material(
-          color: AppColors.surface,
-          borderRadius: BorderRadius.circular(12),
-          child: InkWell(
-            onTap: onTap,
-            borderRadius: BorderRadius.circular(12),
-            child: Container(
-              constraints: const BoxConstraints(minHeight: 54),
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: AppColors.surfaceHigh),
-              ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(icon, color: AppColors.gold, size: 20),
-                  const SizedBox(width: 8),
-                  Flexible(
-                    child: FittedBox(
-                      fit: BoxFit.scaleDown,
-                      child: Text(
-                        label,
-                        maxLines: 1,
-                        style: const TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w700,
-                          color: AppColors.onSurface,
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
         ),
       ),
     );

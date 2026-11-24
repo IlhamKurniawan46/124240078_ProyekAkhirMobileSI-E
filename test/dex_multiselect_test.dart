@@ -49,7 +49,7 @@ void main() {
     await tester.pump(const Duration(milliseconds: 300));
 
     expect(tester.takeException(), isNull);
-    expect(find.text('Event & Pengingat'), findsOneWidget);
+    expect(find.text('Katalog'), findsOneWidget);
     expect(find.byType(CardTile), findsWidgets);
 
     await tester.longPress(find.byType(CardTile).first);
@@ -60,11 +60,11 @@ void main() {
     expect(find.byIcon(Icons.close), findsOneWidget);
     expect(find.byIcon(Icons.favorite_border), findsOneWidget);
     expect(find.byIcon(Icons.calculate_outlined), findsOneWidget);
-    expect(find.text('Event & Pengingat'), findsNothing);
 
     await tester.tap(find.byIcon(Icons.close));
     await tester.pump(const Duration(milliseconds: 200));
 
-    expect(find.text('Event & Pengingat'), findsOneWidget);
+    expect(find.text('1 dipilih'), findsNothing);
+    expect(find.text('Katalog'), findsOneWidget);
   });
 }

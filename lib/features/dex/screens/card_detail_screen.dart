@@ -6,7 +6,6 @@ import '../../../core/models/card_model.dart';
 import '../../../core/repositories/card_repository.dart';
 import '../../../core/services/collection_repository.dart';
 import '../../../core/utils/price_formatter.dart';
-import '../../converter/screens/converter_screen.dart';
 import '../widgets/holo_card_widget.dart';
 
 class CardDetailScreen extends StatefulWidget {
@@ -310,8 +309,6 @@ class _CardDetailScreenState extends State<CardDetailScreen> {
     return ValueListenableBuilder<AppCurrency>(
       valueListenable: AppState.instance.selectedCurrency,
       builder: (context, selectedCurrency, _) {
-        final convertedPrice =
-            CardPriceCalculator.getConvertedPrice(card, selectedCurrency);
         final mainPriceFormatted =
             CardPriceCalculator.formatCardPrice(card, selectedCurrency);
 
@@ -510,71 +507,33 @@ class _CardDetailScreenState extends State<CardDetailScreen> {
                       ),
                     ],
                     const SizedBox(height: 10),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: OutlinedButton.icon(
-                            style: OutlinedButton.styleFrom(
-                              minimumSize: const Size(0, 46),
-                              foregroundColor: AppColors.gold,
-                              side: const BorderSide(
-                                color: AppColors.gold,
-                                width: 1.2,
-                              ),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                            ),
-                            onPressed: () {
-                              Navigator.of(context).push(
-                                MaterialPageRoute(
-                                  builder: (_) => ConverterScreen(
-                                    initialAmount: convertedPrice,
-                                    initialCurrency: selectedCurrency.code,
-                                    cardName: card.name,
-                                  ),
-                                ),
-                              );
-                            },
-                            icon: const Icon(Icons.currency_exchange, size: 17),
-                            label: const Text(
-                              'Konversi Harga',
-                              style: TextStyle(
-                                fontSize: 13,
-                                fontWeight: FontWeight.w700,
-                              ),
-                            ),
+                    SizedBox(
+                      width: double.infinity,
+                      child: OutlinedButton.icon(
+                        style: OutlinedButton.styleFrom(
+                          minimumSize: const Size(0, 46),
+                          foregroundColor: AppColors.pink,
+                          side: BorderSide(
+                            color: AppColors.pink.withValues(alpha: 0.6),
+                            width: 1.2,
+                          ),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
                           ),
                         ),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: OutlinedButton.icon(
-                            style: OutlinedButton.styleFrom(
-                              minimumSize: const Size(0, 46),
-                              foregroundColor: AppColors.pink,
-                              side: BorderSide(
-                                color: AppColors.pink.withValues(alpha: 0.6),
-                                width: 1.2,
-                              ),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                            ),
-                            onPressed: _showTargetPriceDialog,
-                            icon: const Icon(
-                              Icons.notifications_active_outlined,
-                              size: 17,
-                            ),
-                            label: const Text(
-                              'Target Harga',
-                              style: TextStyle(
-                                fontSize: 13,
-                                fontWeight: FontWeight.w700,
-                              ),
-                            ),
+                        onPressed: _showTargetPriceDialog,
+                        icon: const Icon(
+                          Icons.notifications_active_outlined,
+                          size: 17,
+                        ),
+                        label: const Text(
+                          'Atur Target Harga Watchlist',
+                          style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w700,
                           ),
                         ),
-                      ],
+                      ),
                     ),
                   ],
                 ),

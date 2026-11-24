@@ -1,16 +1,18 @@
 import 'package:flutter/material.dart';
 
 import '../../app/theme.dart';
+import '../../features/converter/screens/calendar_screen.dart';
 import '../../features/dex/screens/dex_screen.dart';
 import '../../features/marketplace/screens/marketplace_screen.dart';
 import '../../features/profile/screens/profile_screen.dart';
 
-/// Shell Navigasi Bawah 3 Tab HoloDex v2.
+/// Shell Navigasi Bawah 4 Tab HoloDex v2.
 /// Menggunakan `IndexedStack` dan `NavigationBar` (BottomNavigationBar Material 3)
-/// untuk 3 tab utama:
+/// untuk 4 tab utama:
 /// - Tab 0: Dex ([DexScreen])
 /// - Tab 1: Pasar ([MarketplaceScreen])
-/// - Tab 2: Profil ([ProfileScreen])
+/// - Tab 2: Event ([CalendarScreen])
+/// - Tab 3: Profil ([ProfileScreen])
 class BottomNavShell extends StatefulWidget {
   final int initialIndex;
 
@@ -29,13 +31,14 @@ class _BottomNavShellState extends State<BottomNavShell> {
   final List<Widget> _tabs = const [
     DexScreen(),
     MarketplaceScreen(),
+    CalendarScreen(),
     ProfileScreen(),
   ];
 
   @override
   void initState() {
     super.initState();
-    _currentIndex = widget.initialIndex.clamp(0, 2);
+    _currentIndex = widget.initialIndex.clamp(0, 3);
   }
 
   void _onDestinationSelected(int index) {
@@ -94,6 +97,11 @@ class _BottomNavShellState extends State<BottomNavShell> {
               icon: Icon(Icons.storefront_outlined),
               selectedIcon: Icon(Icons.storefront),
               label: 'Pasar',
+            ),
+            NavigationDestination(
+              icon: Icon(Icons.calendar_month_outlined),
+              selectedIcon: Icon(Icons.calendar_month),
+              label: 'Event',
             ),
             NavigationDestination(
               icon: Icon(Icons.person_outline),
