@@ -671,23 +671,50 @@ class _ListingDetailScreenState extends State<ListingDetailScreen> {
                                 ),
                               ],
                             )
-                          : Container(
-                              padding: const EdgeInsets.symmetric(vertical: 12),
-                              alignment: Alignment.center,
-                              child: Text(
-                                listing.isReserved
-                                    ? 'Listing sedang Dipesan oleh Pembeli'
-                                    : listing.isSold
+                          : listing.isReserved
+                              ? SizedBox(
+                                  width: double.infinity,
+                                  child: FilledButton.icon(
+                                    style: FilledButton.styleFrom(
+                                      minimumSize: const Size(0, 48),
+                                      backgroundColor: AppColors.gold,
+                                      foregroundColor: AppColors.onGold,
+                                    ),
+                                    icon: const Icon(
+                                      Icons.storefront_outlined,
+                                      size: 18,
+                                    ),
+                                    label: const Text(
+                                      'Lihat di Tab Penjualan',
+                                      style: TextStyle(
+                                        fontWeight: FontWeight.w700,
+                                      ),
+                                    ),
+                                    onPressed: () {
+                                      Navigator.of(context).pushReplacement(
+                                        MaterialPageRoute(
+                                          builder: (_) => const MyOrdersScreen(
+                                            initialTabIndex: 1,
+                                          ),
+                                        ),
+                                      );
+                                    },
+                                  ),
+                                )
+                              : Container(
+                                  padding:
+                                      const EdgeInsets.symmetric(vertical: 12),
+                                  alignment: Alignment.center,
+                                  child: Text(
+                                    listing.isSold
                                         ? 'Kartu ini telah terjual'
                                         : 'Listing ini telah dibatalkan',
-                                style: TextStyle(
-                                  color: listing.isReserved
-                                      ? AppColors.gold
-                                      : AppColors.onSurfaceVariant,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                            )
+                                    style: const TextStyle(
+                                      color: AppColors.onSurfaceVariant,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                )
                       : Row(
                           children: [
                             Expanded(

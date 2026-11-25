@@ -855,7 +855,9 @@ class _OrderCardItemState extends State<OrderCardItem> {
                       const SizedBox(width: 4),
                       Expanded(
                         child: Text(
-                          'Bertemu di tempat umum dan periksa kartu sebelum menekan "Sudah kuterima".',
+                          widget.isBuyer
+                              ? 'Bertemu di tempat umum dan periksa kartu sebelum menekan "Sudah Kuterima".'
+                              : 'Bertemu di tempat umum dan pastikan pembeli memeriksa kartu lalu menekan "Sudah Kuterima" agar saldo cair.',
                           style: textTheme.labelSmall?.copyWith(
                             color: AppColors.outline,
                             fontSize: 10,

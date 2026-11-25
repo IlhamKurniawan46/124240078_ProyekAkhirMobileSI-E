@@ -567,9 +567,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
               ),
               body: RefreshIndicator(
                 color: AppColors.gold,
+                backgroundColor: AppColors.surface,
                 onRefresh: _loadProfileData,
                 child: ListView(
-                  padding: const EdgeInsets.all(20),
+                  padding: const EdgeInsets.all(16),
                   children: [
                     Center(
                       child: Column(
@@ -580,13 +581,18 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             user.username,
                             style: const TextStyle(
                               fontSize: 22,
-                              fontWeight: FontWeight.bold,
+                              fontWeight: FontWeight.w800,
+                              color: AppColors.onSurface,
+                              letterSpacing: -0.3,
                             ),
                           ),
                           if (user.email != null && user.email!.isNotEmpty)
                             Text(
                               user.email!,
-                              style: const TextStyle(color: Colors.white54),
+                              style: const TextStyle(
+                                color: AppColors.outline,
+                                fontSize: 13,
+                              ),
                             ),
                           const SizedBox(height: 4),
                           TextButton.icon(
@@ -598,7 +604,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                               style: TextStyle(fontSize: 12),
                             ),
                             style: TextButton.styleFrom(
-                              foregroundColor: AppColors.gold,
+                              foregroundColor: AppColors.goldSoft,
                               visualDensity: VisualDensity.compact,
                             ),
                           ),
@@ -609,16 +615,19 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
                     // Kartu Saldo Virtual + Escrow Rekber + Top Up
                     Container(
-                      padding: const EdgeInsets.all(20),
+                      padding: const EdgeInsets.all(18),
                       decoration: BoxDecoration(
-                        gradient: const LinearGradient(
-                          colors: [Color(0xFF1E293B), Color(0xFF0F172A)],
+                        gradient: LinearGradient(
+                          colors: [
+                            AppColors.surface,
+                            AppColors.surfaceHigh.withValues(alpha: 0.6),
+                          ],
                           begin: Alignment.topLeft,
                           end: Alignment.bottomRight,
                         ),
-                        borderRadius: BorderRadius.circular(18),
+                        borderRadius: BorderRadius.circular(AppTheme.radiusMd),
                         border: Border.all(
-                          color: AppColors.gold.withValues(alpha: 0.4),
+                          color: AppColors.gold.withValues(alpha: 0.3),
                         ),
                       ),
                       child: Column(
@@ -634,8 +643,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                     const Text(
                                       'Saldo Tersedia (IDR)',
                                       style: TextStyle(
-                                        color: Colors.white70,
+                                        color: AppColors.onSurfaceVariant,
                                         fontSize: 12,
+                                        fontWeight: FontWeight.w600,
                                       ),
                                     ),
                                     const SizedBox(height: 6),
@@ -645,20 +655,21 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                         fontSize: 24,
                                         fontWeight: FontWeight.w800,
                                         color: AppColors.gold,
+                                        letterSpacing: -0.5,
                                       ),
                                     ),
                                   ],
                                 ),
                               ),
-                              ElevatedButton.icon(
+                              FilledButton.icon(
                                 onPressed: () =>
                                     _showTopUpDialog(context, user),
                                 icon: const Icon(Icons.add_rounded, size: 18),
                                 label: const Text('Top Up'),
-                                style: ElevatedButton.styleFrom(
+                                style: FilledButton.styleFrom(
                                   minimumSize: const Size(96, 40),
                                   backgroundColor: AppColors.gold,
-                                  foregroundColor: Colors.black,
+                                  foregroundColor: AppColors.onGold,
                                   padding: const EdgeInsets.symmetric(
                                     horizontal: 14,
                                     vertical: 10,
@@ -668,20 +679,23 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             ],
                           ),
                           if (_heldEscrowIdr > 0) ...[
-                            const Divider(height: 20, color: Colors.white12),
+                            const Divider(
+                              height: 20,
+                              color: AppColors.surfaceHigh,
+                            ),
                             Row(
                               children: [
                                 const Icon(
                                   Icons.shield_outlined,
                                   size: 16,
-                                  color: Colors.amber,
+                                  color: AppColors.goldSoft,
                                 ),
                                 const SizedBox(width: 8),
                                 const Text(
                                   'Ditahan di Rekber (Escrow): ',
                                   style: TextStyle(
                                     fontSize: 12,
-                                    color: Colors.white70,
+                                    color: AppColors.onSurfaceVariant,
                                   ),
                                 ),
                                 Text(
@@ -689,7 +703,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                   style: const TextStyle(
                                     fontSize: 12,
                                     fontWeight: FontWeight.bold,
-                                    color: Colors.amber,
+                                    color: AppColors.goldSoft,
                                   ),
                                 ),
                               ],
@@ -702,7 +716,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
                     // Kartu Total Nilai Portofolio Binder
                     InkWell(
-                      borderRadius: BorderRadius.circular(18),
+                      borderRadius: BorderRadius.circular(AppTheme.radiusMd),
                       onTap: () async {
                         await Navigator.push(
                           context,
@@ -714,21 +728,22 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       },
                       child: Container(
                         padding: const EdgeInsets.symmetric(
-                          horizontal: 20,
+                          horizontal: 18,
                           vertical: 16,
                         ),
                         decoration: BoxDecoration(
                           gradient: LinearGradient(
                             colors: [
-                              AppColors.cyan.withValues(alpha: 0.22),
-                              const Color(0xFF0F172A),
+                              AppColors.surface,
+                              AppColors.surfaceHigh.withValues(alpha: 0.6),
                             ],
                             begin: Alignment.topLeft,
                             end: Alignment.bottomRight,
                           ),
-                          borderRadius: BorderRadius.circular(18),
+                          borderRadius:
+                              BorderRadius.circular(AppTheme.radiusMd),
                           border: Border.all(
-                            color: AppColors.cyan.withValues(alpha: 0.45),
+                            color: AppColors.gold.withValues(alpha: 0.3),
                           ),
                         ),
                         child: Row(
@@ -736,13 +751,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             Container(
                               padding: const EdgeInsets.all(10),
                               decoration: BoxDecoration(
-                                color: AppColors.cyan.withValues(alpha: 0.18),
-                                borderRadius: BorderRadius.circular(12),
+                                color: AppColors.gold.withValues(alpha: 0.14),
+                                borderRadius:
+                                    BorderRadius.circular(AppTheme.radiusSm),
                               ),
                               child: const Icon(
                                 Icons.auto_awesome_motion_rounded,
-                                color: AppColors.cyan,
-                                size: 24,
+                                color: AppColors.gold,
+                                size: 22,
                               ),
                             ),
                             const SizedBox(width: 14),
@@ -753,8 +769,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                   Text(
                                     'Total Nilai Portofolio (${selectedCurrency.code})',
                                     style: const TextStyle(
-                                      color: Colors.white70,
+                                      color: AppColors.onSurfaceVariant,
                                       fontSize: 12,
+                                      fontWeight: FontWeight.w600,
                                     ),
                                   ),
                                   const SizedBox(height: 4),
@@ -765,7 +782,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                     style: const TextStyle(
                                       fontSize: 18,
                                       fontWeight: FontWeight.w800,
-                                      color: AppColors.cyan,
+                                      color: AppColors.gold,
+                                      letterSpacing: -0.3,
                                     ),
                                   ),
                                 ],
@@ -773,38 +791,47 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             ),
                             const Icon(
                               Icons.chevron_right_rounded,
-                              color: Colors.white54,
+                              color: AppColors.outline,
                             ),
                           ],
                         ),
                       ),
                     ),
 
-                    const SizedBox(height: 24),
+                    const SizedBox(height: 22),
 
                     // Pengaturan Kontak COD (WhatsApp)
                     const Text(
-                      'Pengaturan Kontak COD',
+                      'PENGATURAN KONTAK COD',
                       style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white70,
+                        fontSize: 11,
+                        fontWeight: FontWeight.w700,
+                        letterSpacing: 0.8,
+                        color: AppColors.outline,
                       ),
                     ),
                     const SizedBox(height: 8),
                     Card(
                       child: ListTile(
-                        leading: CircleAvatar(
-                          backgroundColor: const Color(0xFF25D366)
-                              .withValues(alpha: 0.15),
+                        leading: Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: AppColors.success.withValues(alpha: 0.14),
+                            borderRadius:
+                                BorderRadius.circular(AppTheme.radiusSm),
+                          ),
                           child: const Icon(
                             Icons.chat_rounded,
-                            color: Color(0xFF25D366),
+                            color: AppColors.success,
+                            size: 20,
                           ),
                         ),
                         title: const Text(
-                          'Nomor WhatsApp COD',
-                          style: TextStyle(fontWeight: FontWeight.w600),
+                          'Nomor WhatsApp',
+                          style: TextStyle(
+                            fontWeight: FontWeight.w700,
+                            color: AppColors.onSurface,
+                          ),
                         ),
                         subtitle: Text(
                           hasWa
@@ -812,17 +839,21 @@ class _ProfileScreenState extends State<ProfileScreen> {
                               : 'Belum diatur • Wajib diisi sebelum jual/beli kartu',
                           style: TextStyle(
                             fontSize: 12,
-                            color: hasWa ? AppColors.cyan : Colors.amber,
+                            color: hasWa
+                                ? AppColors.onSurfaceVariant
+                                : AppColors.goldSoft,
                           ),
                         ),
                         trailing: OutlinedButton(
                           style: OutlinedButton.styleFrom(
                             minimumSize: const Size(64, 36),
                             side: BorderSide(
-                              color: hasWa ? Colors.white24 : AppColors.gold,
+                              color: hasWa
+                                  ? AppColors.surfaceHigh
+                                  : AppColors.gold,
                             ),
                             foregroundColor: hasWa
-                                ? Colors.white
+                                ? AppColors.onSurface
                                 : AppColors.gold,
                             padding: const EdgeInsets.symmetric(horizontal: 12),
                           ),
@@ -840,20 +871,21 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       ),
                     ),
 
-                    const SizedBox(height: 18),
+                    const SizedBox(height: 20),
                     const Text(
-                      'Menu Kolektor',
+                      'MENU KOLEKTOR',
                       style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white70,
+                        fontSize: 11,
+                        fontWeight: FontWeight.w700,
+                        letterSpacing: 0.8,
+                        color: AppColors.outline,
                       ),
                     ),
                     const SizedBox(height: 8),
 
                     _ProfileMenuTile(
                       icon: Icons.collections_bookmark_rounded,
-                      title: 'Koleksi Saya (Binder Fisik)',
+                      title: 'Koleksi Saya',
                       subtitle:
                           'Kartu hasil pembelian COD (${_collectionItems.length} kartu)',
                       badgeText: '${_collectionItems.length}',
@@ -870,7 +902,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     ),
                     _ProfileMenuTile(
                       icon: Icons.handshake_rounded,
-                      title: 'Pesanan Saya (Rekber COD)',
+                      title: 'Pesanan Saya',
                       subtitle: 'Pantau pesanan aktif, konfirmasi COD & hubungi WhatsApp',
                       badgeText: activeOrderCount > 0
                           ? '$activeOrderCount Aktif'
@@ -888,7 +920,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     ),
                     _ProfileMenuTile(
                       icon: Icons.notifications_active_rounded,
-                      title: 'Watchlist & Target Harga',
+                      title: 'Watchlist',
                       subtitle:
                           'Kartu incaran dan pengingat harga turun ($_watchlistCount kartu)',
                       badgeText: _watchlistCount > 0
@@ -967,15 +999,25 @@ class _ProfileMenuTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Card(
-      margin: const EdgeInsets.only(bottom: 12),
+      margin: const EdgeInsets.only(bottom: 10),
       child: ListTile(
-        leading: Icon(icon, color: AppColors.gold),
+        leading: Container(
+          padding: const EdgeInsets.all(8),
+          decoration: BoxDecoration(
+            color: AppColors.gold.withValues(alpha: 0.12),
+            borderRadius: BorderRadius.circular(AppTheme.radiusSm),
+          ),
+          child: Icon(icon, color: AppColors.gold, size: 20),
+        ),
         title: Row(
           children: [
             Flexible(
               child: Text(
                 title,
-                style: const TextStyle(fontWeight: FontWeight.bold),
+                style: const TextStyle(
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.onSurface,
+                ),
                 overflow: TextOverflow.ellipsis,
               ),
             ),
@@ -984,10 +1026,10 @@ class _ProfileMenuTile extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                 decoration: BoxDecoration(
-                  color: (badgeColor ?? AppColors.gold).withValues(alpha: 0.2),
-                  borderRadius: BorderRadius.circular(10),
+                  color: (badgeColor ?? AppColors.gold).withValues(alpha: 0.15),
+                  borderRadius: BorderRadius.circular(AppTheme.radiusSm),
                   border: Border.all(
-                    color: badgeColor ?? AppColors.gold,
+                    color: (badgeColor ?? AppColors.gold).withValues(alpha: 0.5),
                     width: 0.8,
                   ),
                 ),
@@ -995,7 +1037,7 @@ class _ProfileMenuTile extends StatelessWidget {
                   badgeText!,
                   style: TextStyle(
                     fontSize: 10,
-                    fontWeight: FontWeight.bold,
+                    fontWeight: FontWeight.w700,
                     color: badgeColor ?? AppColors.gold,
                   ),
                 ),
@@ -1005,9 +1047,15 @@ class _ProfileMenuTile extends StatelessWidget {
         ),
         subtitle: Text(
           subtitle,
-          style: const TextStyle(fontSize: 12, color: Colors.white60),
+          style: const TextStyle(
+            fontSize: 12,
+            color: AppColors.onSurfaceVariant,
+          ),
         ),
-        trailing: const Icon(Icons.chevron_right_rounded),
+        trailing: const Icon(
+          Icons.chevron_right_rounded,
+          color: AppColors.outline,
+        ),
         onTap: onTap,
       ),
     );

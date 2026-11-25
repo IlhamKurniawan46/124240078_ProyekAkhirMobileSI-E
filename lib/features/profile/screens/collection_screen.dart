@@ -118,40 +118,14 @@ class _CollectionScreenState extends State<CollectionScreen> {
                             child: Padding(
                               padding:
                                   const EdgeInsets.fromLTRB(16, 12, 16, 8),
-                              child: Row(
-                                mainAxisAlignment:
-                                    MainAxisAlignment.spaceBetween,
-                                children: [
-                                  Flexible(
-                                    child: Text(
-                                      'DAFTAR KARTU FISIK (${_items.length})',
-                                      style: textTheme.labelMedium?.copyWith(
-                                        color: AppColors.outline,
-                                        fontWeight: FontWeight.w700,
-                                        letterSpacing: 0.8,
-                                      ),
-                                      overflow: TextOverflow.ellipsis,
-                                    ),
-                                  ),
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 8,
-                                      vertical: 2,
-                                    ),
-                                    decoration: BoxDecoration(
-                                      color: AppColors.surfaceHigh,
-                                      borderRadius: BorderRadius.circular(6),
-                                    ),
-                                    child: const Text(
-                                      'Baca-Saja',
-                                      style: TextStyle(
-                                        fontSize: 10,
-                                        fontWeight: FontWeight.w600,
-                                        color: AppColors.onSurfaceVariant,
-                                      ),
-                                    ),
-                                  ),
-                                ],
+                              child: Text(
+                                'DAFTAR KARTU FISIK (${_items.length})',
+                                style: textTheme.labelMedium?.copyWith(
+                                  color: AppColors.outline,
+                                  fontWeight: FontWeight.w700,
+                                  letterSpacing: 0.8,
+                                ),
+                                overflow: TextOverflow.ellipsis,
                               ),
                             ),
                           ),

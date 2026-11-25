@@ -322,6 +322,21 @@ class _MarketplaceScreenState extends State<MarketplaceScreen> {
   }
 
   Future<void> _openListingDetail(ListingModel listing) async {
+    final currentUserId = AppState.instance.currentUser.value?.id;
+    if (listing.isReserved &&
+        currentUserId != null &&
+        listing.sellerId == currentUserId) {
+      await Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (_) => const MyOrdersScreen(initialTabIndex: 1),
+        ),
+      );
+      if (mounted) {
+        await _loadData();
+      }
+      return;
+    }
+
     final changed = await Navigator.of(context).push<bool>(
       MaterialPageRoute(
         builder: (_) => ListingDetailScreen(

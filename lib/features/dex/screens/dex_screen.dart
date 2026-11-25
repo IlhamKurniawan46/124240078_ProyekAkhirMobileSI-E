@@ -26,7 +26,6 @@ class _DexScreenState extends State<DexScreen> {
   List<CardModel> _cards = [];
   SortOrder _sortOrder = SortOrder.expensiveFirst;
   bool _isLoading = false;
-  bool _isSyncingApi = false;
 
   bool get _isSelectionMode => _selectedCardIds.isNotEmpty;
 
@@ -59,119 +58,6 @@ class _DexScreenState extends State<DexScreen> {
         onlyPriced: false,
       );
     });
-  }
-
-  Future<void> _syncFromTcgdexApi(String setId) async {
-    if (_isSyncingApi) return;
-    setState(() => _isSyncingApi = true);
-
-    final syncedCount = await CardRepository.syncSetFromTcgdexApi(
-      setId,
-      maxNewCards: 6,
-    );
-
-    if (!mounted) return;
-    setState(() {
-      _isSyncingApi = false;
-      _cards = CardRepository.getAllCards(
-        sortOrder: _sortOrder,
-        onlyPriced: false,
-      );
-    });
-
-    final messenger = ScaffoldMessenger.of(context);
-    messenger.hideCurrentSnackBar();
-    messenger.showSnackBar(
-      SnackBar(
-        content: Text(
-          syncedCount > 0
-              ? 'Berhasil menyinkronkan $syncedCount kartu dari TCGdex REST API ($setId)!'
-              : 'Katalog lokal siap digunakan (${_cards.length} kartu di Hive).',
-        ),
-        backgroundColor: AppColors.surfaceHighest,
-        behavior: SnackBarBehavior.floating,
-      ),
-    );
-  }
-
-  void _showTcgdexSyncDialog() {
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: AppColors.surfaceLow,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (ctx) {
-        return SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    const Icon(Icons.cloud_sync, color: AppColors.gold, size: 22),
-                    const SizedBox(width: 8),
-                    const Expanded(
-                      child: Text(
-                        'Sinkronkan Katalog (TCGdex REST API)',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                          color: AppColors.onSurface,
-                        ),
-                      ),
-                    ),
-                    IconButton(
-                      icon: const Icon(Icons.close, color: AppColors.outline),
-                      onPressed: () => Navigator.pop(ctx),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 6),
-                const Text(
-                  'Pilih set ekspansi untuk ditarik langsung melalui HTTP GET ke api.tcgdex.net dan disimpan ke Hive Box:',
-                  style: TextStyle(fontSize: 12, color: AppColors.outline),
-                ),
-                const SizedBox(height: 16),
-                ...CardRepository.targetSets.map((s) {
-                  final setId = s['id']!;
-                  final setName = s['name']!;
-                  return Container(
-                    margin: const EdgeInsets.only(bottom: 8),
-                    decoration: BoxDecoration(
-                      color: AppColors.surface,
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: AppColors.surfaceHigh),
-                    ),
-                    child: ListTile(
-                      leading: const Icon(Icons.catching_pokemon, color: AppColors.gold),
-                      title: Text(
-                        setName,
-                        style: const TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      subtitle: Text(
-                        'GET /v2/en/sets/$setId',
-                        style: const TextStyle(fontSize: 11, color: AppColors.outline),
-                      ),
-                      trailing: const Icon(Icons.download, color: AppColors.gold, size: 20),
-                      onTap: () {
-                        Navigator.pop(ctx);
-                        _syncFromTcgdexApi(setId);
-                      },
-                    ),
-                  );
-                }),
-              ],
-            ),
-          ),
-        );
-      },
-    );
   }
 
   void _toggleCardSelection(String cardId) {
@@ -613,25 +499,6 @@ class _DexScreenState extends State<DexScreen> {
                   height: 22,
                   fit: BoxFit.contain,
                 ),
-                actions: [
-                  IconButton(
-                    tooltip: 'Sinkronkan dari TCGdex API',
-                    icon: _isSyncingApi
-                        ? const SizedBox(
-                            width: 18,
-                            height: 18,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              color: AppColors.gold,
-                            ),
-                          )
-                        : const Icon(
-                            Icons.cloud_sync_outlined,
-                            color: AppColors.gold,
-                          ),
-                    onPressed: _isSyncingApi ? null : _showTcgdexSyncDialog,
-                  ),
-                ],
               ),
         body: ValueListenableBuilder<AppCurrency>(
           valueListenable: AppState.instance.selectedCurrency,
@@ -992,7 +859,7 @@ class _DexScreenState extends State<DexScreen> {
           color: isSelected ? AppColors.gold : AppColors.surfaceHigh,
         ),
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(14),
+          borderRadius: BorderRadius.circular(AppTheme.radiusSm),
         ),
       ),
     );
