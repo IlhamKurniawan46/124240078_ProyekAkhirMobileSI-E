@@ -215,45 +215,6 @@ class CardRepository {
     }
   }
 
-  /// Menyinkronkan kartu-kartu dari suatu set (`swsh3`, `swsh7`, `sv01`, `sv05`)
-  /// langsung melalui HTTP GET ke **TCGdex REST API** (`GET /v2/en/sets/{setId}`).
-  static Future<int> syncSetFromTcgdexApi(
-    String setId, {
-    int maxNewCards = 8,
-  }) async {
-    final setUrl = Uri.parse('${AppConstants.tcgdexBaseUrl}/sets/$setId');
-    try {
-      final setRes = await http
-          .get(setUrl, headers: {'Accept': 'application/json'})
-          .timeout(const Duration(seconds: 10));
-
-      if (setRes.statusCode != 200) return 0;
-
-      final setData = jsonDecode(setRes.body) as Map<String, dynamic>;
-      final rawCards = setData['cards'] as List<dynamic>? ?? [];
-      int syncedCount = 0;
-
-      for (final item in rawCards) {
-        if (syncedCount >= maxNewCards) break;
-        if (item is! Map) continue;
-
-        final cid = item['id']?.toString();
-        final image = item['image']?.toString();
-        if (cid == null || image == null || image.isEmpty) continue;
-
-        final fetched = await fetchCardDetailFromApi(cid);
-        if (fetched != null && fetched.hasPrice) {
-          syncedCount++;
-        }
-      }
-
-      return syncedCount;
-    } catch (e) {
-      debugPrint('[HoloDex Warning] Gagal sync set $setId dari TCGdex API: $e');
-      return 0;
-    }
-  }
-
   /// Mengekstrak objek [CardModel] beserta harga `tcgplayer` & `cardmarket`
   /// dari JSON resmi TCGdex REST API (`/v2/en/cards/{id}`).
   static CardModel? parseTcgdexCardJson(Map<String, dynamic> json) {
